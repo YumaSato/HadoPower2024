@@ -28,7 +28,9 @@ public class GridCtrl : MonoBehaviour
     public Character[,] playerLayer;
     public HadoCtrl[,] hadoLayer;
     public CellType[,] typeLayer;
+
     public GameObject[,] cellTexts;
+    public TextMeshPro[,] cellTextContents;
 
     public int[,] red_energy;
     public int[,] blue_energy;
@@ -47,6 +49,8 @@ public class GridCtrl : MonoBehaviour
         typeLayer = new CellType[STAGE_SIZE_X, STAGE_SIZE_Y];
 
         cellTexts = new GameObject[STAGE_SIZE_X, STAGE_SIZE_Y];
+        cellTextContents = new TextMeshPro[STAGE_SIZE_X, STAGE_SIZE_Y];
+
         red_energy = new int [STAGE_SIZE_X, STAGE_SIZE_Y];
         blue_energy = new int[STAGE_SIZE_X, STAGE_SIZE_Y];
 
@@ -60,6 +64,15 @@ public class GridCtrl : MonoBehaviour
                 typeLayer[ix, iy] = CellType.VACANT;//全マスをVACANTにセット
 
 
+                cellTexts[ix, iy] = Instantiate(wMgr.CellTextPrefab, new Vector2(ix, iy), Quaternion.identity);//全マスにCellTextを設置
+                cellTexts[ix, iy].transform.parent = transform;//波及波動を記すcellTextをGridの子ヒエラルキーにする。
+                cellTextContents[ix, iy] = cellTexts[ix, iy].GetComponent<TextMeshPro>();
+
+
+                if (cellTextContents[ix, iy] == null)//????????????
+                {
+                    Debug.LogError($"TextMeshProコンポーネントが取得できませんでした。位置: ({ix}, {iy})");
+                }
             }
         }
 
@@ -249,41 +262,72 @@ public class GridCtrl : MonoBehaviour
             {
                 if (hadoLayer[ix, iy] != null)//Hadoがある地点のエネルギーを設定。
                 {
+                    Action<int, int, int, Team> f = (ix, iy, myTeamPoint, team) =>
+                    {
+
+                        for (int jx = 0; jx < STAGE_SIZE_X; jx++)
+                        {
+                            for (int jy = 0; jy < STAGE_SIZE_X; jy++)
+                            {
+                                double p = myTeamPoint * 1 / Math.Pow(Math.Sqrt((jx - ix) ^ 2 + (jy - iy) ^ 2), 1.5);//Energy加算
+                                if (team == Team.Red)
+                                {
+                                    blue_energy[ix, iy] -= (int)p;
+                                    if (blue_energy[ix, iy] < 0)
+                                    {
+                                        red_energy[ix, iy] = -blue_energy[ix, iy];
+                                        blue_energy[ix, iy] = 0;
+                                    }
+
+                                    if (team == Team.Blue)
+                                    {
+                                        red_energy[ix, iy] -= (int)p;
+                                        if (red_energy[ix, iy] < 0)
+                                        {
+                                            blue_energy[ix, iy] = -red_energy[ix, iy];
+                                            red_energy[ix, iy] = 0;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    };
+
                     switch (hadoLayer[ix, iy].teamColor)
                     {
                         case Team.Red:
-                        red_energy[ix, iy] = hadoLayer[ix, iy].powerLevel;
+                            red_energy[ix, iy] = hadoLayer[ix, iy].powerLevel;
+                            f(ix, iy, red_energy[ix, iy], Team.Red);
                             break;
                         case Team.Blue:
                             blue_energy[ix, iy] = hadoLayer[ix, iy].powerLevel;
+                            f(ix, iy, blue_energy[ix, iy], Team.Blue);
                             break;
                     }
                 }
             }
         }
 
-
-        for (int ix = 0; ix < STAGE_SIZE_X; ix++)//全マス探索して、エネルギーを周囲に波及
+        for (int ix = 0; ix < STAGE_SIZE_X; ix++)//全マス探索してエネルギーをテキストに反映させる
         {
             for (int iy = 0; iy < STAGE_SIZE_Y; iy++)
             {
-                Action<int, int, Team> f = (ix, iy, t) =>
+                if (red_energy[ix, iy] <= 0 && blue_energy[ix, iy] <= 0)
                 {
-                    
-                };
-
-                if (red_energy[ix, iy] != 0)//energyがあったら。
-                {
-                    f(ix, iy, Team.Red);
+                    cellTextContents[ix, iy].text = "";
                 }
-                if (blue_energy[ix, iy] != 0)//energyがあったら。
+                if (red_energy[ix, iy] > 0)
                 {
-                    f(ix, iy, Team.Blue);
+                    cellTextContents[ix, iy].text = red_energy[ix, iy].ToString();
+                    cellTextContents[ix, iy].color = Color.red;
+                }
+                if (blue_energy[ix, iy] > 0)
+                {
+                    cellTextContents[ix, iy].text = blue_energy[ix, iy].ToString();
+                    cellTextContents[ix, iy].color = Color.blue;
                 }
             }
         }
-
-
     }
 
 

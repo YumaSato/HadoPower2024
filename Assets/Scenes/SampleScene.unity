@@ -298,7 +298,7 @@ MonoBehaviour:
   meterPrefab: {fileID: 1167792343}
   barPrefab: {fileID: 0}
   namePrefab: {fileID: 7975900228169812093}
-  CellTextPrefab: {fileID: 0}
+  CellTextPrefab: {fileID: 960915703}
   players: []
   redHado: []
   blueHado: []
@@ -6281,6 +6281,11 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 4
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &960915703 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3267331088088428876, guid: 58d203c3ba2883c47b7d8fd15c04d1c9, type: 3}
+  m_PrefabInstance: {fileID: 9106985838929024105}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1120495946
 GameObject:
   m_ObjectHideFlags: 0
@@ -6692,6 +6697,10 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 390496056}
     m_Modifications:
+    - target: {fileID: 1169355352372820990, guid: 58d203c3ba2883c47b7d8fd15c04d1c9, type: 3}
+      propertyPath: m_text
+      value: HadoEnergy
+      objectReference: {fileID: 0}
     - target: {fileID: 2784543322437853535, guid: 58d203c3ba2883c47b7d8fd15c04d1c9, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
