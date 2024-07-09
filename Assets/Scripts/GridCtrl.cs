@@ -29,8 +29,10 @@ public class GridCtrl : MonoBehaviour
     public HadoCtrl[,] hadoLayer;
     public CellType[,] typeLayer;
 
+    public Canvas ca;
+
     public GameObject[,] cellTexts;
-    public TextMeshPro[,] cellTextContents;
+    public TextMeshProUGUI[,] cellTextContents;
 
     public int[,] red_energy;
     public int[,] blue_energy;
@@ -48,8 +50,9 @@ public class GridCtrl : MonoBehaviour
         hadoLayer = new HadoCtrl[STAGE_SIZE_X, STAGE_SIZE_Y];
         typeLayer = new CellType[STAGE_SIZE_X, STAGE_SIZE_Y];
 
+        ca = GetComponentInChildren<Canvas>();
         cellTexts = new GameObject[STAGE_SIZE_X, STAGE_SIZE_Y];
-        cellTextContents = new TextMeshPro[STAGE_SIZE_X, STAGE_SIZE_Y];
+        cellTextContents = new TextMeshProUGUI[STAGE_SIZE_X, STAGE_SIZE_Y];
 
         red_energy = new int [STAGE_SIZE_X, STAGE_SIZE_Y];
         blue_energy = new int[STAGE_SIZE_X, STAGE_SIZE_Y];
@@ -59,20 +62,23 @@ public class GridCtrl : MonoBehaviour
 
         for (int ix = 0; ix < STAGE_SIZE_X; ix++)
         {
-            for (int iy = 0; iy < STAGE_SIZE_X; iy++)
+            for (int iy = 0; iy < STAGE_SIZE_Y; iy++)
             {
                 typeLayer[ix, iy] = CellType.VACANT;//全マスをVACANTにセット
 
 
                 cellTexts[ix, iy] = Instantiate(wMgr.CellTextPrefab, new Vector2(ix, iy), Quaternion.identity);//全マスにCellTextを設置
                 cellTexts[ix, iy].transform.parent = transform;//波及波動を記すcellTextをGridの子ヒエラルキーにする。
-                cellTextContents[ix, iy] = cellTexts[ix, iy].GetComponent<TextMeshPro>();
+                cellTexts[ix, iy].transform.parent = ca.transform;
+                cellTextContents[ix, iy] = cellTexts[ix, iy].GetComponent<TextMeshProUGUI>();
 
 
-                if (cellTextContents[ix, iy] == null)//????????????
-                {
-                    Debug.LogError($"TextMeshProコンポーネントが取得できませんでした。位置: ({ix}, {iy})");
-                }
+
+                cellTextContents[ix, iy].text = "";
+                cellTextContents[ix, iy].rectTransform.sizeDelta = new Vector2(1.2f, 0.2f);
+                cellTextContents[ix, iy].fontSize = 0.5f;
+                cellTextContents[ix, iy].alignment = TextAlignmentOptions.Center;
+                cellTextContents[ix, iy].color = Color.black;
             }
         }
 
@@ -194,10 +200,10 @@ public class GridCtrl : MonoBehaviour
                             wMgr.deleteHado(hadoLayer[ix, iy].teamColor, hadoLayer[ix, iy].ID);
                             hadoLayer[ix, iy] = null;
                         }
-                        else if(hadoLayer[ix, iy].teamColor == checkedTeam)//非検査色のそれ以外の波動は力がセットされる。
-                        {
-                            hadoLayer[ix, iy].setPower(ret[ix, iy]);
-                        }
+                        //else if(hadoLayer[ix, iy].teamColor == checkedTeam)//非検査色のそれ以外の波動は力がセットされる。
+                        //{
+                        //    hadoLayer[ix, iy].setPower(100);
+                        //}
                     }
                 }
             }
@@ -251,47 +257,64 @@ public class GridCtrl : MonoBehaviour
 
     public void spreadHadoEnergy()
     {
-        int[] dx = { 0, 1, 0, -1, 1, 1, -1, -1 };
-        int[] dy = { 1, 0, -1, 0, 1, -1, 1, -1 };
-        double[] factor = { 0.2, 0.2, 0.2, 0.2, 0.1, 0.1, 0.1, 0.1 };
-
-
         for (int ix = 0; ix < STAGE_SIZE_X; ix++)//全マス探索
+        {
+            for (int iy = 0; iy < STAGE_SIZE_Y; iy++)
+            {
+                blue_energy[ix, iy] = 0;
+                red_energy[ix, iy] = 0;
+            }
+        }
+
+
+                for (int ix = 0; ix < STAGE_SIZE_X; ix++)//全マス探索
         {
             for (int iy = 0; iy < STAGE_SIZE_Y; iy++)
             {
                 if (hadoLayer[ix, iy] != null)//Hadoがある地点のエネルギーを設定。
                 {
+                    
+
                     Action<int, int, int, Team> f = (ix, iy, myTeamPoint, team) =>
                     {
 
-                        for (int jx = 0; jx < STAGE_SIZE_X; jx++)
+                        for (int jx = ix - 4; jx <= ix + 4; jx++)//根源波動の座標から+=5以内にエネルギーを波及させる
                         {
-                            for (int jy = 0; jy < STAGE_SIZE_X; jy++)
+                            for (int jy = iy - 4; jy <= iy + 4; jy++)
                             {
-                                double p = myTeamPoint * 1 / Math.Pow(Math.Sqrt((jx - ix) ^ 2 + (jy - iy) ^ 2), 1.5);//Energy加算
-                                if (team == Team.Red)
+                                if (jx < STAGE_SIZE_X && jx > 0 && jy < STAGE_SIZE_X && jy > 0)//Grid外に出ていないか
                                 {
-                                    blue_energy[ix, iy] -= (int)p;
-                                    if (blue_energy[ix, iy] < 0)
-                                    {
-                                        red_energy[ix, iy] = -blue_energy[ix, iy];
-                                        blue_energy[ix, iy] = 0;
-                                    }
 
-                                    if (team == Team.Blue)
+                                    if (hadoLayer[jx,jy] == null && typeLayer[jx,jy] == CellType.VACANT)//波動がないマスかつ海でも岩でもない
                                     {
-                                        red_energy[ix, iy] -= (int)p;
-                                        if (red_energy[ix, iy] < 0)
+                                        double p = myTeamPoint /( 3 * Math.Pow(Math.Sqrt(Math.Pow(jx - ix, 2) + Math.Pow(jy - iy, 2)), 2.5));//Energy計算
+                                        if (team == Team.Red)
                                         {
-                                            blue_energy[ix, iy] = -red_energy[ix, iy];
-                                            red_energy[ix, iy] = 0;
+                                            
+                                            blue_energy[jx, jy] -= (int)p;
+                                            if (blue_energy[jx, jy] < 0)
+                                            {
+                                                red_energy[jx, jy] += -blue_energy[jx, jy];
+                                                blue_energy[jx, jy] = 0;
+                                            }
+                                        }
+                                        if (team == Team.Blue)
+                                        {
+                                            red_energy[jx, jy] -= (int)p;
+                                            if (red_energy[jx, jy] < 0)
+                                            {
+                                                blue_energy[jx, jy] += -red_energy[jx, jy];
+                                                red_energy[jx, jy] = 0;
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
                     };
+
+
+                    hadoLayer[ix, iy].setPower(60);
 
                     switch (hadoLayer[ix, iy].teamColor)
                     {
