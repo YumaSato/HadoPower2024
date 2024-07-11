@@ -248,6 +248,38 @@ public class GridCtrl : MonoBehaviour
 
 
 
+    public int gatherEnergy(int x, int y, Team t, ref bool[,] b)
+    {
+        if(x >= 0 && STAGE_SIZE_X > x && y >= 0 && STAGE_SIZE_Y > y)
+        {
+            if (b[x,y] == false)//–¢ˆ—‚Ìƒ}ƒX‚È‚ç
+            {
+                b[x,y] = true;//ˆ—Ï‚É•ÏX
+                int p = 0;
+
+                if (t == Team.Red)
+                {
+                    p = red_energy[x, y];
+                }
+                if (t == Team.Blue)
+                {
+                    p = blue_energy[x, y];
+                }
+                if (p == 0) return 0;
+
+                p += gatherEnergy(x - 1, y, t, ref b);
+                p += gatherEnergy(x + 1, y, t, ref b);
+                p += gatherEnergy(x, y + 1, t, ref b);
+                p += gatherEnergy(x, y - 1, t, ref b);
+
+                return p;
+            }
+        }
+        return 0;
+    }
+
+
+
 
 
 
@@ -278,7 +310,7 @@ public class GridCtrl : MonoBehaviour
                     Action<int, int, int, Team> f = (ix, iy, myTeamPoint, team) =>
                     {
 
-                        for (int jx = ix - 4; jx <= ix + 4; jx++)//ªŒ¹”g“®‚ÌÀ•W‚©‚ç+=5ˆÈ“à‚ÉƒGƒlƒ‹ƒM[‚ğ”g‹y‚³‚¹‚é
+                        for (int jx = ix - 7; jx <= ix + 7; jx++)//ªŒ¹”g“®‚ÌÀ•W‚©‚ç+=7ˆÈ“à‚ÉƒGƒlƒ‹ƒM[‚ğ”g‹y‚³‚¹‚é
                         {
                             for (int jy = iy - 4; jy <= iy + 4; jy++)
                             {
@@ -287,7 +319,7 @@ public class GridCtrl : MonoBehaviour
 
                                     if (hadoLayer[jx,jy] == null && typeLayer[jx,jy] == CellType.VACANT)//”g“®‚ª‚È‚¢ƒ}ƒX‚©‚ÂŠC‚Å‚àŠâ‚Å‚à‚È‚¢
                                     {
-                                        double p = myTeamPoint /( 3 * Math.Pow(Math.Sqrt(Math.Pow(jx - ix, 2) + Math.Pow(jy - iy, 2)), 2.5));//EnergyŒvZ
+                                        double p = myTeamPoint /( 1 * Math.Pow(Math.Sqrt(Math.Pow(jx - ix, 2) + Math.Pow(jy - iy, 2)), 2.5));//EnergyŒvZ
                                         if (team == Team.Red)
                                         {
                                             
@@ -314,7 +346,7 @@ public class GridCtrl : MonoBehaviour
                     };
 
 
-                    hadoLayer[ix, iy].setPower(60);
+                    hadoLayer[ix, iy].setPower(20);
 
                     switch (hadoLayer[ix, iy].teamColor)
                     {
@@ -402,6 +434,27 @@ public class GridCtrl : MonoBehaviour
             if (playerLayer[_xCell, _yCell] != null) return playerLayer[_xCell, _yCell];
         }
         return null;
+    }
+
+
+    public int getEnergy(int _xCell, int _yCell, Team t, bool isMyEnergy)
+    {
+        if (isMyEnergy)
+        {
+            switch (t)
+            {
+                case Team.Red: return red_energy[_xCell, _yCell];
+                case Team.Blue: return blue_energy[_xCell, _yCell];
+            }
+        }
+        else
+        {
+            switch (t) {
+                case Team.Red: return blue_energy[_xCell, _yCell];
+                case Team.Blue: return red_energy[_xCell, _yCell];
+            }
+        }
+        return -1;
     }
 
 }

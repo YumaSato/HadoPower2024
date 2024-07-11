@@ -195,7 +195,7 @@ public class WorkerMgr : MonoBehaviour
         //本来はここに、次のキャラのstartTurnを呼ぶ部分があるべきなのだが、Updateに移設した。
 
 
-        Debug.Log("0,0"+ gridCtrl.isPlayerVacant(0, 0));
+        //Debug.Log("0,0"+ gridCtrl.isPlayerVacant(0, 0));
         //Debug.Log(gridCtrl.playerLayer[0,0].attackPower);
     }
 }

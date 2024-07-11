@@ -36,6 +36,7 @@ public class Character : MonoBehaviour
 
     public PointMeter hp;
     public PointMeter stamina;
+    public PointMeter power;
 
 
     //character()//継承されているためコンストラクタをここに作ると面倒なことが起きる？
@@ -59,9 +60,13 @@ public class Character : MonoBehaviour
 
         hp = this.gameObject.AddComponent<PointMeter>();
         stamina = this.gameObject.AddComponent<PointMeter>();
+        power = this.gameObject.AddComponent<PointMeter>();
 
-        hp.setPointMeter(this, "HP", 100);
-        stamina.setPointMeter(this, "力", 20);
+        hp.setPointMeter(this, "HP", 300);
+        stamina.setPointMeter(this, "Sta", 20);
+        power.setPointMeter(this, "Pow", 5000);
+
+        power.change(-power.maxP + 1);
 
         deadCountMax = 3; deadCount = 0;//死んだ時に何ターンで復活するか
         ghost = false;
@@ -88,6 +93,16 @@ public class Character : MonoBehaviour
 
                 StartCoroutine(Move(new Vector2(x, y)));//移動状態の映像、開始。
                 stamina.change(-1);
+
+                setPower();
+
+                //hp.change(wMgr.gridCtrl.getEnergy(xCell, yCell, teamNum, true));
+                //hp.change(-wMgr.gridCtrl.getEnergy(xCell, yCell, teamNum, false));
+
+                if(hp.preP == 0) 
+                {
+                    endTurn();
+                }
             }
         }
     }
@@ -111,6 +126,7 @@ public class Character : MonoBehaviour
 
                 StartCoroutine(Move(new Vector2(x, y)));//移動状態の映像、開始。
                 stamina.change(-1);
+                setPower();
             }
         }
     }
@@ -161,6 +177,7 @@ public class Character : MonoBehaviour
         {
 
             ResidueHado = ResidueHado - wMgr.createHado(teamNum, xCell, yCell);//設置に成功すると1が返ってくる
+            setPower();
         }
         
     }
@@ -171,8 +188,13 @@ public class Character : MonoBehaviour
         {
             if(wMgr.gridCtrl.isPlayerVacant(xCell + dx, yCell + dy) == false)//対象地に誰かいる場合
             {
-                Debug.Log(string.Format("攻撃。x:", xCell + dx , "y,", yCell + dy));
+                if(wMgr.gridCtrl.getCharacter(xCell + dx, yCell + dy).hp.preP <= 0)//対象者が死体の場合
+                {
+                    return false;
+                }
 
+
+                Debug.Log(string.Format("攻撃。x:", xCell + dx , "y,", yCell + dy));
                 beatSound.Play();
                 beatSound.volume = 0.3f;
                 beatSound.time = 0.6f;
@@ -324,6 +346,21 @@ public class Character : MonoBehaviour
         xCell = x;
         yCell = y;
         transform.position = new Vector3(xCell, yCell, 0);
+    }
+
+
+
+
+
+
+
+    public void setPower()
+    {
+        bool[,] buf = new bool[wMgr.gridCtrl.STAGE_SIZE_X, wMgr.gridCtrl.STAGE_SIZE_Y];
+
+
+        Debug.Log(power.preP);
+        power.setPoint(wMgr.gridCtrl.gatherEnergy(xCell,yCell,teamNum, ref buf));
     }
 
 

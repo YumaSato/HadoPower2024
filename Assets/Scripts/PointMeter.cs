@@ -24,8 +24,6 @@ public class PointMeter : MonoBehaviour
     //public GameObject namePrefab;
 
     public GameObject meter;
-    //public GameObject bar;
-    //public GameObject comment;
 
     public Slider slider;
     public GameObject meterNameObject;
@@ -44,14 +42,19 @@ public class PointMeter : MonoBehaviour
         //Debug.Log(c.transform.position);
 
         Vector3 a = new Vector3(c.xCell, c.yCell, 0);
-        if (meterName == "óÕ")
+        if (meterName == "Sta")
         {
-            a = new Vector3(c.xCell, c.yCell - 0.2f, 0);
+            a = new Vector3(c.xCell, c.yCell - 0.15f, 0);
+        }
+        if (meterName == "Pow")
+        {
+            a = new Vector3(c.xCell, c.yCell - 0.30f, 0);
         }
 
 
         meter = Instantiate(c.wMgr.meterPrefab, a, Quaternion.identity);
         meter.SetActive(false);
+        meter.transform.localScale = new Vector3(1, 0.7f,1);
         meter.transform.parent = c.transform;//Character(C)ÇÃTransformÇí«è]Ç∑ÇÈÇÊÇ§Ç…ÇµÇΩÅB
         meter.name = meterName;
 
@@ -62,10 +65,9 @@ public class PointMeter : MonoBehaviour
         //meterNameObject =meter.transform.Find("Canvas/MeterName").gameObject;
         TextMeshProUGUI nameText = meter.GetComponentInChildren<TextMeshProUGUI>();
 
-        if (meterName == "óÕ")
-        {
-            nameText.text = meterName;
-        }
+
+        nameText.text = meterName;
+
 
 
     }
@@ -110,14 +112,10 @@ public class PointMeter : MonoBehaviour
 
         if (showMeterFlag)//ï\é¶Ç∑ÇÈ
         {
-
             meter.SetActive(true);
-
-
         }
         else
         {
-
             meter.SetActive(false);
         }
 
@@ -125,5 +123,24 @@ public class PointMeter : MonoBehaviour
         {
             c.death();
         }
+    }
+
+
+    public void setPoint(int p)
+    {
+        preP = p;
+        if (preP <= 0 ){
+            preP = 0;
+            meter.SetActive(false);
+        }else if(preP >= maxP)
+        {
+            preP = maxP;
+            meter.SetActive(false);
+        }
+        else
+        {
+            meter.SetActive(true);
+        }
+        slider.value = (float)preP / (float)maxP;
     }
 }
