@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Data;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -11,11 +12,11 @@ public class PointMeter : MonoBehaviour
 
     public string meterName;
 
-    public int maxP;
+    public float maxP;
     //public int minP;
-    public int preP;
+    public float preP;
 
-    public int naturalRecovery;
+    public float naturalRecovery;
 
 
 
@@ -28,7 +29,7 @@ public class PointMeter : MonoBehaviour
     public Slider slider;
     public GameObject meterNameObject;
 
-    public void setPointMeter(Character _c, string _meterName, int _maxP)
+    public void setPointMeter(Character _c, string _meterName, float _maxP)
     {
         c = _c;
         meterName = _meterName;
@@ -44,6 +45,7 @@ public class PointMeter : MonoBehaviour
         Vector3 a = new Vector3(c.xCell, c.yCell, 0);
         if (meterName == "Sta")
         {
+
             a = new Vector3(c.xCell, c.yCell - 0.15f, 0);
         }
         if (meterName == "Pow")
@@ -55,12 +57,13 @@ public class PointMeter : MonoBehaviour
         meter = Instantiate(c.wMgr.meterPrefab, a, Quaternion.identity);
         meter.SetActive(false);
         meter.transform.localScale = new Vector3(1, 0.7f,1);
-        meter.transform.parent = c.transform;//Character(C)ÇÃTransformÇí«è]Ç∑ÇÈÇÊÇ§Ç…ÇµÇΩÅB
+        meter.transform.parent = c.transform;//Character(C)„ÅÆTransform„ÇíËøΩÂæì„Åô„Çã„Çà„ÅÜ„Å´„Åó„Åü„ÄÇ
         meter.name = meterName;
 
         slider = meter.GetComponentInChildren<Slider>();
 
         slider.value = preP / maxP;
+       
 
         //meterNameObject =meter.transform.Find("Canvas/MeterName").gameObject;
         TextMeshProUGUI nameText = meter.GetComponentInChildren<TextMeshProUGUI>();
@@ -90,12 +93,12 @@ public class PointMeter : MonoBehaviour
 
 
 
-    public void change(int changeHP)
+    public void change(float changeHP)
     {
         bool showMeterFlag = true;
 
         preP = preP + changeHP;
-        if (preP <= 0)//éÄÇÒÇæÇ∆Ç´
+        if (preP <= 0)//Ê≠ª„Çì„Å†„Å®„Åç
         {
             preP = 0;
             showMeterFlag = false;
@@ -110,7 +113,7 @@ public class PointMeter : MonoBehaviour
         slider.value = (float)preP / (float)maxP;
         //Debug.Log(preP.ToString() + "/" + maxP.ToString() + "=" + slider.value.ToString());
 
-        if (showMeterFlag)//ï\é¶Ç∑ÇÈ
+        if (showMeterFlag)//Ë°®Á§∫„Åô„Çã
         {
             meter.SetActive(true);
         }
@@ -119,14 +122,14 @@ public class PointMeter : MonoBehaviour
             meter.SetActive(false);
         }
 
-        if(preP == 0 && meterName == "HP")//0Ç…Ç»Ç¡ÇΩÉÅÅ[É^Å[ÇÃílÇ™HPÇ≈Ç†Ç¡ÇΩÇÁéÄ
+        if(preP == 0 && meterName == "HP")//0„Å´„Å™„Å£„Åü„É°„Éº„Çø„Éº„ÅÆÂÄ§„ÅåHP„Åß„ÅÇ„Å£„Åü„ÇâÊ≠ª
         {
             c.death();
         }
     }
 
 
-    public void setPoint(int p)
+    public void setPoint(float p)
     {
         preP = p;
         if (preP <= 0 ){

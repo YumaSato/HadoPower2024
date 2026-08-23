@@ -1,384 +1,365 @@
 using System.Collections;
 using System.Collections.Generic;
-using UnityEditor.Experimental.GraphView;
 using UnityEngine;
-using UnityEngine.Networking.Types;
 
 public class Character : MonoBehaviour
 {
+    private const int MaxInventorySlots = 30;
+    private const int RespawnWaitTurns = 2;
+
     public GameObject myBody;
     public WorkerMgr wMgr;
     public Animator anim;
-
     public AudioSource beatSound;
 
-    public bool isMyTurn = false;
-
-    bool isMoving = false;
-
+    public bool isMyTurn;
     public int ResidueHado = 1;
-
-    public int id;
     public Team teamNum;
-
     public int xCell;
     public int yCell;
+    public int dx = 1;
+    public int dy = 0;
 
-    public int dx;
-    public int dy;
-
-    public int deadCount;
-    public int deadCountMax;
-    public bool ghost;//ˆê“x€‚ñ‚¾‚©
-
-
-    public int attackPower;
+    // å¾©æ´»åœ°ç‚¹ã¯ã€å„è‰²ã®çµç•Œã«æ–œã‚éš£æ¥ã™ã‚‹äºŒãƒã‚¹ã®ã†ã¡æ‹…å½“ã‚­ãƒ£ãƒ©ã‚¯ã‚¿ãƒ¼ã”ã¨ã«å›ºå®šã™ã‚‹ã€‚
+    public int spawnX;
+    public int spawnY;
+    public bool ghost;
 
     public PointMeter hp;
     public PointMeter stamina;
     public PointMeter power;
 
+    private bool isMoving;
+    private bool hasCompletedWalkThisTurn;
+    private int respawnTurnsRemaining;
+    private readonly List<BoardItemData> inventory = new List<BoardItemData>();
 
-    //character()//Œp³‚³‚ê‚Ä‚¢‚é‚½‚ßƒRƒ“ƒXƒgƒ‰ƒNƒ^‚ğ‚±‚±‚Éì‚é‚Æ–Ê“|‚È‚±‚Æ‚ª‹N‚«‚éH
-    //{
+    public bool IsMoving => isMoving;
+    // HUD ã¯å…¥åŠ›çŠ¶æ…‹ãã®ã‚‚ã®ã‚’å¤‰æ›´ã›ãšã€ç¾åœ¨ã‚¿ãƒ¼ãƒ³ã«è¶³å…ƒã¸æ³¢å‹•çŸ³ã‚’ç½®ã‘ã‚‹ã‹ã‚’è¡¨ç¤ºã™ã‚‹ã€‚
+    public bool HasCompletedWalkThisTurn => hasCompletedWalkThisTurn;
+    public int RespawnTurnsRemaining => respawnTurnsRemaining;
+    public int InventoryCount => inventory.Count;
+    public bool HasFreeInventorySlot => InventoryCount < MaxInventorySlots;
 
-    //}
-
-
-    public void setCharacter(int x, int y, Team t, WorkerMgr w, GameObject _myBody)
+    // æ³¢å‹•ç ã¯ä¸€æ ã ãŒã€ç§»å‹•ã‚¹ã‚¿ãƒŸãƒŠä¸Šã§ã¯20å€‹åˆ†ã®é‡ã•ã¨ã—ã¦æ‰±ã†ã€‚
+    public int InventoryWeight
     {
-        wMgr = w;
-        myBody = _myBody;
-        xCell = x;
-        yCell = y;
-        transform.position = new Vector3(x, y, 0);
-        dx = 1;
-        dy = 1;
-        teamNum = t;
-        beatSound = GetComponent<AudioSource>();
-        //wMgr.gridCtrl.PutCharacter(this);//‰Šú”z’u
-
-        hp = this.gameObject.AddComponent<PointMeter>();
-        stamina = this.gameObject.AddComponent<PointMeter>();
-        power = this.gameObject.AddComponent<PointMeter>();
-
-        hp.setPointMeter(this, "HP", 300);
-        stamina.setPointMeter(this, "Sta", 20);
-        power.setPointMeter(this, "Pow", 5000);
-
-        power.change(-power.maxP + 1);
-
-        deadCountMax = 3; deadCount = 0;//€‚ñ‚¾‚É‰½ƒ^[ƒ“‚Å•œŠˆ‚·‚é‚©
-        ghost = false;
+        get
+        {
+            int total = 0;
+            foreach (BoardItemData item in inventory) total += item.Weight;
+            return total;
+        }
     }
 
+    public void setCharacter(int x, int y, Team t, WorkerMgr w, GameObject body)
+    {
+        wMgr = w;
+        myBody = body;
+        xCell = x;
+        yCell = y;
+        spawnX = x;
+        spawnY = y;
+        transform.position = new Vector3(x, y, 0.0f);
+        teamNum = t;
+        beatSound = GetComponent<AudioSource>();
 
+        hp = gameObject.AddComponent<PointMeter>();
+        stamina = gameObject.AddComponent<PointMeter>();
+        power = gameObject.AddComponent<PointMeter>();
+        hp.setPointMeter(this, "HP", 10000.0f);
+        stamina.setPointMeter(this, "Sta", 20.0f);
+        power.setPointMeter(this, "Pow", 5000.0f);
+        power.setPoint(1.0f);
+
+        ghost = false;
+        respawnTurnsRemaining = 0;
+    }
 
     public void walk()
     {
-        if (isMoving == false && ((Input.GetKey(KeyCode.RightShift)) == false && (Input.GetKey(KeyCode.LeftShift)) == false) && (Input.GetAxisRaw("Horizontal") != 0 | Input.GetAxisRaw("Vertical") != 0))
+        if (isMoving || IsModifierHeld()) return;
+        if (Input.GetAxisRaw("Horizontal") == 0 && Input.GetAxisRaw("Vertical") == 0) return;
+
+        int moveX = (int)Input.GetAxisRaw("Horizontal");
+        int moveY = (int)Input.GetAxisRaw("Vertical");
+        dx = moveX;
+        dy = moveY;
+        if (anim != null)
         {
-            float x = Input.GetAxisRaw("Horizontal");
-            float y = Input.GetAxisRaw("Vertical");
-            dx = (int)x;
-            dy = (int)y;
             anim.SetInteger("xd", dx);
             anim.SetInteger("yd", dy);
-
-            if (wMgr.gridCtrl.isPlayerAndCellTypeVacant(xCell + dx, yCell + dy) && stamina.preP > 0)//ˆÚ“®‚µ‚½‚¢ƒ}ƒX‚ª‹ó”’‚ÅAƒXƒ^ƒ~ƒi‚ª0‚Å‚È‚¯‚ê‚Î
-            {
-                wMgr.gridCtrl.moveCharacter(xCell, yCell, xCell + dx, yCell + dy);
-                xCell = xCell + dx;
-                yCell = yCell + dy;
-
-                StartCoroutine(Move(new Vector2(x, y)));//ˆÚ“®ó‘Ô‚Ì‰f‘œAŠJnB
-                stamina.change(-1);
-
-                setPower();
-
-                //hp.change(wMgr.gridCtrl.getEnergy(xCell, yCell, teamNum, true));
-                //hp.change(-wMgr.gridCtrl.getEnergy(xCell, yCell, teamNum, false));
-
-                if(hp.preP == 0) 
-                {
-                    endTurn();
-                }
-            }
         }
+
+        int targetX = xCell + dx;
+        int targetY = yCell + dy;
+        if (!wMgr.gridCtrl.isPlayerAndCellTypeVacant(targetX, targetY)) return;
+
+        float movementCost = wMgr.gridCtrl.GetMovementCost(targetX, targetY, this);
+        if (stamina.preP + 0.0001f < movementCost) return;
+
+        wMgr.gridCtrl.moveCharacter(xCell, yCell, targetX, targetY);
+        xCell = targetX;
+        yCell = targetY;
+        stamina.change(-movementCost);
+        // é€šå¸¸ç§»å‹•ã§ã¯åˆ°ç€æ™‚ã«è‡ªå‹•æ‹¾å¾—ã™ã‚‹ã€‚Ctrlã‚’æŠ¼ã—ã¦ã„ã‚‹æ™‚ã ã‘æ‹¾ã‚ãšã«é€šéã™ã‚‹ã€‚
+        bool shouldAutoPickUp = !(Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl));
+        StartCoroutine(Move(new Vector2(moveX, moveY), shouldAutoPickUp));
     }
 
-    public void specialWalk()//VacantˆÈŠO‚Ì’nŒ`‚ÌêŠ‚à•à‚¯‚é•às
+    // æ—¢å­˜ã®æ´¾ç”Ÿã‚¯ãƒ©ã‚¹ã‚„ã‚¤ãƒ™ãƒ³ãƒˆã‹ã‚‰å‘¼ã°ã‚Œã¦ã‚‚ã€æ–°ã—ã„ç§»å‹•è¦å‰‡ã‚’é€šã™ãŸã‚ walk ã¨åŒã˜å‡¦ç†ã«ã™ã‚‹ã€‚
+    public void specialWalk()
     {
-        if (isMoving == false && ((Input.GetKey(KeyCode.RightShift)) == false && (Input.GetKey(KeyCode.LeftShift)) == false) && (Input.GetAxisRaw("Horizontal") != 0 | Input.GetAxisRaw("Vertical") != 0))
-        {
-            float x = Input.GetAxisRaw("Horizontal");
-            float y = Input.GetAxisRaw("Vertical");
-            dx = (int)x;
-            dy = (int)y;
-            anim.SetInteger("xd", dx);
-            anim.SetInteger("yd", dy);
-
-            if (wMgr.gridCtrl.isPlayerVacant(xCell + dx, yCell + dy) && stamina.preP > 0)//ˆÚ“®‚µ‚½‚¢ƒ}ƒX‚ª‹ó”’‚ÅAƒXƒ^ƒ~ƒi‚ª0‚Å‚È‚¯‚ê‚Î
-            {
-                wMgr.gridCtrl.moveCharacter(xCell, yCell, xCell + dx, yCell + dy);
-                xCell = xCell + dx;
-                yCell = yCell + dy;
-
-                StartCoroutine(Move(new Vector2(x, y)));//ˆÚ“®ó‘Ô‚Ì‰f‘œAŠJnB
-                stamina.change(-1);
-                setPower();
-            }
-        }
+        walk();
     }
-
 
     public void changeDirection()
     {
-        if (isMoving == false & (Input.GetKey(KeyCode.RightShift)) || (Input.GetKey(KeyCode.LeftShift)) & (Input.GetAxisRaw("Horizontal") != 0 | Input.GetAxisRaw("Vertical") != 0))
+        if (isMoving || !IsModifierHeld()) return;
+        if (Input.GetAxisRaw("Horizontal") == 0 && Input.GetAxisRaw("Vertical") == 0) return;
+
+        dx = (int)Input.GetAxisRaw("Horizontal");
+        dy = (int)Input.GetAxisRaw("Vertical");
+        if (anim != null)
         {
-            float x = Input.GetAxisRaw("Horizontal");
-            float y = Input.GetAxisRaw("Vertical");
-            dx = (int)x;
-            dy = (int)y;
             anim.SetInteger("xd", dx);
             anim.SetInteger("yd", dy);
         }
     }
 
-
-
-
-    public void jump(int x, int y)
+    private static bool IsModifierHeld()
     {
+        return Input.GetKey(KeyCode.RightShift) || Input.GetKey(KeyCode.LeftShift);
     }
 
-    IEnumerator Move(Vector3 direction)
+    private IEnumerator Move(Vector3 direction, bool shouldAutoPickUp)
     {
         isMoving = true;
-
-        Vector3 targetPos = transform.position + direction;
-        //Œ»İ‚Æƒ^[ƒQƒbƒg‚ÌêŠ‚ªˆá‚Á‚½‚ç‹ß‚Ã‚¯‘±‚¯‚éB
-        while ((targetPos - transform.position).sqrMagnitude > Mathf.Epsilon)
+        Vector3 targetPosition = transform.position + direction;
+        while ((targetPosition - transform.position).sqrMagnitude > Mathf.Epsilon)
         {
-            //‹ß‚Ã‚¯‚é(MoveToward‚ÍAu1Œ»İ’n, 2–Ú•W’n“_, 3‘¬“xv‚Å–Ú•W‚ÉŒü‚©‚Á‚ÄˆÚ“®‚·‚é‚Æ‚¢‚¤ŠÖ”)
-            transform.position = Vector3.MoveTowards(transform.position, targetPos, 5f * Time.deltaTime);
-            yield return null;//1ƒtƒŒ[ƒ€•ª‘Ò‚Â‚Æ‚¢‚¤ˆÓ–¡B
+            transform.position = Vector3.MoveTowards(transform.position, targetPosition, 5.0f * Time.deltaTime);
+            yield return null;
         }
-        transform.position = targetPos;
-        isMoving = false; 
+
+        transform.position = targetPosition;
+        isMoving = false;
+        hasCompletedWalkThisTurn = true;
+        wMgr.gridCtrl.HandleWalkFinished(this, shouldAutoPickUp);
     }
 
-
-
-
+    // æ³¢å‹•çŸ³ã ã‘ã¯ã€å®Ÿéš›ã«æ­©è¡Œã‚’çµ‚ãˆãŸã‚¿ãƒ¼ãƒ³ã«è¶³å…ƒã¸ç½®ã‘ã‚‹ã€‚
     public void installPower()
     {
-        if (Input.GetKeyDown("z") & ResidueHado > 0)
-        {
-
-            ResidueHado = ResidueHado - wMgr.createHado(teamNum, xCell, yCell);//İ’u‚É¬Œ÷‚·‚é‚Æ1‚ª•Ô‚Á‚Ä‚­‚é
-            setPower();
-        }
-        
+        if (!Input.GetKeyDown(KeyCode.Z) || isMoving || !hasCompletedWalkThisTurn || ResidueHado <= 0) return;
+        ResidueHado -= wMgr.createHado(teamNum, xCell, yCell);
     }
 
+    private void HandleItemInputs()
+    {
+        if (isMoving) return;
+
+        // V: è‡ªè»è‰²ã®æ³¢å‹•ç‰‡20å€‹ã‚’æ³¢å‹•ç 1å€‹ã¸å¤‰æ›ã™ã‚‹å‰ã«ã€ç¢ºèªç”»é¢ã‚’é–‹ãã€‚
+        if (Input.GetKeyDown(KeyCode.V)) wMgr.gridCtrl.TryOpenFragmentConversionPrompt(this, true);
+        // E: æ•µè‰²çµç•Œã«æ¥ã™ã‚‹5ãƒã‚¹ã‹ã‚‰ã€è‡ªè»è‰²ã®æ³¢å‹•ç ã‚’ä¸€ã¤æŠ•å…¥ã™ã‚‹ã€‚
+        if (Input.GetKeyDown(KeyCode.E)) wMgr.gridCtrl.TryDepositPearl(this);
+        // å‰¥é›¢é­”æ³•ç¬¦ãªã©ã®ã‚¢ã‚¤ãƒ†ãƒ ä½¿ç”¨ã¯ã€Aã§é–‹ãã‚¢ã‚¤ãƒ†ãƒ è¡Œå‹•ãƒ¡ãƒ‹ãƒ¥ãƒ¼ã‹ã‚‰è¡Œã†ã€‚
+    }
+
+    // æ—§æ¥ã®é€šå¸¸æ”»æ’ƒã¯ã€å‹åˆ©æ¡ä»¶ã§ã¯ãªã„è£œåŠ©è¡Œå‹•ã¨ã—ã¦æ®‹ã™ã€‚
+    // åœ°ãƒ‘ãƒ¯ãƒ¼ã‚’æ”»æ’ƒåŠ›ã¸ç›´æ¥å¤‰æ›ã™ã‚‹å‡¦ç†ã¯è¡Œã‚ãªã„ã€‚
     public bool attack()
     {
-        if(Input.GetKeyDown("c") & ResidueHado > 0)
+        if (!Input.GetKeyDown(KeyCode.C) || isMoving || ResidueHado <= 0) return false;
+
+        Character target = wMgr.gridCtrl.getCharacter(xCell + dx, yCell + dy);
+        if (target == null || target.hp.preP <= 0.0f) return false;
+
+        if (beatSound != null)
         {
-            if(wMgr.gridCtrl.isPlayerVacant(xCell + dx, yCell + dy) == false)//‘ÎÛ’n‚É’N‚©‚¢‚éê‡
+            beatSound.Play();
+            beatSound.volume = 0.3f;
+            beatSound.time = 0.6f;
+        }
+        target.hp.change(-power.preP);
+        power.setPoint(1.0f);
+        return true;
+    }
+
+    public void startTurn()
+    {
+        if (isMyTurn || wMgr.gridCtrl.IsGameOver) return;
+
+        // æ­»äº¡å¾Œã¯æœ¬äººã®äºŒã‚¿ãƒ¼ãƒ³ã‚’è‡ªå‹•ã§æ¶ˆè²»ã—ã€ä¸‰åº¦ç›®ã®é–‹å§‹æ™‚ã«æº€ã‚¿ãƒ³ã§å¾©æ´»ã™ã‚‹ã€‚
+        if (ghost)
+        {
+            if (respawnTurnsRemaining > 0)
             {
-                if(wMgr.gridCtrl.getCharacter(xCell + dx, yCell + dy).hp.preP <= 0)//‘ÎÛÒ‚ª€‘Ì‚Ìê‡
-                {
-                    return false;
-                }
-
-
-                Debug.Log(string.Format("UŒ‚Bx:", xCell + dx , "y,", yCell + dy));
-                beatSound.Play();
-                beatSound.volume = 0.3f;
-                beatSound.time = 0.6f;
-                wMgr.gridCtrl.getCharacter(xCell + dx, yCell + dy).hp.change(-attackPower);
-                return true;
+                respawnTurnsRemaining--;
+                wMgr.gridCtrl.HandleTurnEnded();
+                wMgr.turnNext();
+                return;
             }
+
+            ghost = false;
+            wMgr.gridCtrl.RespawnCharacter(this);
+            hp.setPoint(hp.maxP);
+            stamina.setPoint(stamina.maxP);
         }
-        return false;
-    }
 
-
-    public void startTurn()//ƒ^[ƒ“‚ªn‚Ü‚é‚Æ‚«‚ÉwMgr‚©‚çŒÄ‚Î‚ê‚éB
-    {
-        if(isMyTurn)return;//Šù‚É©•ª‚Ìƒ^[ƒ“‚Å‚ ‚éê‡A‰½‚à•Ï‚¦‚é‚±‚Æ‚Í‚È‚¢B
-        
         ResidueHado = 1;
+        hasCompletedWalkThisTurn = false;
+        stamina.setPoint(stamina.maxP);
         isMyTurn = true;
-        if(deadCount == deadCountMax)
-        {
-            hp.change(hp.maxP);
-        }
-
     }
 
-    public void endTurn()//•à‚«I‚í‚Á‚½‚Æ‚«‚È‚ÇA‚±‚ê‚ğŒÄ‚ÔBturnNext‚ğŒÄ‚ñ‚ÅA‘ÎÛ‚ğŸ‚ÌƒLƒƒƒ‰‚É•Ï‚¦‚Ä‚à‚ç‚¤B
+    public void endTurn()
     {
+        if (!isMyTurn) return;
+        wMgr.gridCtrl.CancelItemInteraction(this);
         isMyTurn = false;
-        stamina.change(stamina.naturalRecovery);
+        if (hasCompletedWalkThisTurn && !ghost)
+        {
+            wMgr.gridCtrl.ApplyEndOfTurnGroundEffect(this);
+        }
+        wMgr.gridCtrl.HandleTurnEnded();
         wMgr.turnNext();
     }
 
-
-    public void generalUpdate()//ƒAƒbƒvƒf[ƒgi‚±‚êj‚ğŠeX‚ÌƒLƒƒƒ‰ƒNƒ^[‚ÌƒRƒ“ƒgƒ[ƒ‰‚ÌUpdate‚©‚çŒÄ‚ñ‚Å‚à‚ç‚¤B
+    public void generalUpdate()
     {
-        if (isMyTurn)
+        if (!isMyTurn || ghost || wMgr.gridCtrl.IsGameOver) return;
+
+        // å–æ¨ãƒ»æŠ•æ“²ç”»é¢ã‚’é–‹ã„ã¦ã„ã‚‹é–“ã¯ã€ç§»å‹•ã‚„ä»–ã®è¡Œå‹•å…¥åŠ›ã‚’å—ã‘ä»˜ã‘ãªã„ã€‚
+        if (wMgr.gridCtrl.HandleItemInteractionInput(this)) return;
+
+        changeDirection();
+        walk();
+        installPower();
+        HandleItemInputs();
+
+        bool attackEnded = attack();
+        if ((Input.GetKeyDown(KeyCode.X) && !isMoving) || attackEnded)
         {
-            bool isTurnEnd = false;
-            changeDirection();
-
-            if (hp.preP == 0)//€‚ñ‚Å‚¢‚éƒLƒƒƒ‰‚ÍƒXƒ‹[
-            {
-                //–{—ˆA‚±‚±‚Å€Ò•œŠˆƒ^[ƒ“‚P‰ÁZ‚ğ•\¦‚·‚éB
-                if (Input.GetKeyDown("x")) isTurnEnd = true;
-                if (isTurnEnd)
-                {
-                    Debug.Log("€Ò‚Ìƒ^[ƒ“B•œŠˆ‚Ü‚Å‚ ‚Æ" + (deadCountMax - deadCount - 1) + "ƒ^[ƒ“‚É‚È‚Á‚½");
-                    deadCount += 1;
-                    endTurn();
-                }
-            }
-            else if (deadCount == deadCountMax)//•œŠˆƒ^[ƒ“‚Ì“Á•Ês“®
-            {
-                specialWalk();
-                installPower();
-                isTurnEnd = attack();
-                if (Input.GetKeyDown("x")) isTurnEnd = true;
-                if (isTurnEnd)
-                {
-                    deadCount = 0;
-                    stamina.change(stamina.naturalRecovery);//ƒXƒ^ƒ~ƒi©‘R‰ñ•œ
-                    if (wMgr.gridCtrl.isCellTypeVacant(xCell, yCell) == false)//’Êíƒ}ƒX‚É–ß‚Á‚Ä‚¢‚È‚¯‚ê‚Î€
-                    {
-                        Debug.Log("€Ò•œŠˆƒ^[ƒ“I—¹" + wMgr.gridCtrl.isCellTypeVacant(xCell, yCell));
-                        death();
-                    }
-                    Debug.Log("endTurn‚ğŒÄ‚ñ‚¾B");
-                    endTurn();
-                }
-
-            }
-            else{
-                walk();
-                installPower();
-                isTurnEnd = attack();
-                if (Input.GetKeyDown("x")) isTurnEnd = true;
-                if (isTurnEnd)
-                {
-                    stamina.preP = stamina.preP + stamina.naturalRecovery;//ƒXƒ^ƒ~ƒi©‘R‰ñ•œ
-                    Debug.Log("endTurn‚ğŒÄ‚ñ‚¾B");
-                    endTurn();
-                }
-            }
+            endTurn();
         }
     }
 
-    public void death()//‚±‚ÌƒLƒƒƒ‰©g‚ª€‚ñ‚¾,€‘Ì“o˜^’n“_‚ÖˆÚ“®‚³‚¹A•œŠˆ‘Ò‹@ó‘Ô‚É‚³‚¹‚éB
+    public void death()
     {
-        hp.preP = 0;
+        if (ghost) return;
+
+        wMgr.gridCtrl.CancelItemInteraction(this);
+
+        int deathX = xCell;
+        int deathY = yCell;
+        hp.setPoint(0.0f);
         ghost = true;
-        deadCount = 0;
-        //myBody.SetActive(false);
-        int x=0, y=0;
-        int xStageSize = wMgr.gridCtrl.STAGE_SIZE_X - 1;
-        int yStageSize = wMgr.gridCtrl.STAGE_SIZE_Y - 1;
+        respawnTurnsRemaining = RespawnWaitTurns;
+        wMgr.gridCtrl.DropAllItemsAt(this, deathX, deathY);
+        wMgr.gridCtrl.RemoveCharacterFromBoard(this);
 
-        bool[] isVacant = { true, true, true, true };
-        int placeNum = 0;
-        int deadCharacterNum = 0;
-        foreach (var c in wMgr.characters)
-        {
-            if(c.hp.preP == 0)//€‘Ì”ƒJƒEƒ“ƒg‚Ì‘‰Á‚Æ€‘Ì’n“_ió“ü•s”\’n“_j“o˜^
-            {
-                deadCharacterNum++;
-                if (c.xCell == 0 && c.yCell == 0) isVacant[0] = false;
-                if (c.xCell == 0 && c.yCell == yStageSize) isVacant[1] = false;
-                if (c.xCell == xStageSize && c.yCell == 0) isVacant[2] = false;
-                if (c.xCell == xStageSize && c.yCell == yStageSize) isVacant[3] = false;
-            }
-        }
-        
-
-        placeNum = Random.Range(0, 4 - deadCharacterNum);//€‘Ì—A‘—æ‚Ìó“ü”‚ª•ª‚©‚Á‚½‚Ì‚ÅAó“ü’n“_”Ô†‚ğ—”‚Å“¾‚éB
-
-        Debug.Log("€‘Ìó“ü’n“_ó‹µ [0]" + isVacant[0] + "  [1]" + isVacant[1] + "  [2]" + isVacant[2] + "  [3]" + isVacant[3] + "     €‘Ì—A‘—Šó–]’n:" + placeNum);
-
-        for (int b=0; b<=placeNum; b++)
-        {
-            if (isVacant[b] == false)//—”‚æ‚è¬‚³‚¢”‚Éó“ü•s”\’n“_‚ª‚ ‚ê‚ÎAó“ü’n“_”Ô†‚ğ1‚Ó‚â‚·
-            {
-                placeNum++;
-            }
-        }
-
-        Debug.Log("€‘Ì—A‘—’n:" + placeNum);
-
-        switch (placeNum)
-        {
-            case 0:
-                x = 0;
-                y = 0;
-                break;
-            case 1:
-                x = 0;
-                y = yStageSize;
-
-                break;
-            case 2:
-                x = xStageSize;
-                y = 0;
-                break;
-            case 3:
-                x = xStageSize;
-                y = yStageSize;
-                break;
-        }
-
-
-        wMgr.gridCtrl.moveCharacter(xCell, yCell, x, y);
-        xCell = x;
-        yCell = y;
-        transform.position = new Vector3(xCell, yCell, 0);
+        if (isMyTurn) endTurn();
     }
 
+    public bool AddItem(BoardItemData item)
+    {
+        if (item == null || !HasFreeInventorySlot) return false;
+        inventory.Add(item);
+        return true;
+    }
 
+    public int CountItems(BoardItemType type, Team? team)
+    {
+        int count = 0;
+        foreach (BoardItemData item in inventory)
+        {
+            if (item.type != type) continue;
+            if (team.HasValue && item.team != team) continue;
+            count++;
+        }
+        return count;
+    }
 
+    // è‰²ãªã—ã‚¢ã‚¤ãƒ†ãƒ ã‚’å«ã‚ã€ç¨®é¡ã¨é™£å–¶ãŒå®Œå…¨ã«ä¸€è‡´ã™ã‚‹æ•°ã‚’è¿”ã™ã€‚
+    public int CountItemsExact(BoardItemType type, Team? team)
+    {
+        int count = 0;
+        foreach (BoardItemData item in inventory)
+        {
+            if (item.type == type && item.team == team) count++;
+        }
+        return count;
+    }
 
+    public void RemoveItems(BoardItemType type, Team? team, int count)
+    {
+        for (int index = inventory.Count - 1; index >= 0 && count > 0; index--)
+        {
+            BoardItemData item = inventory[index];
+            if (item.type != type) continue;
+            if (team.HasValue && item.team != team) continue;
+            inventory.RemoveAt(index);
+            count--;
+        }
+    }
 
+    public BoardItemData RemoveFirstItem(BoardItemType type, Team? team)
+    {
+        for (int index = 0; index < inventory.Count; index++)
+        {
+            BoardItemData item = inventory[index];
+            if (item.type != type) continue;
+            if (team.HasValue && item.team != team) continue;
+            inventory.RemoveAt(index);
+            return item;
+        }
+        return null;
+    }
 
+    public BoardItemData RemoveFirstItemExact(BoardItemType type, Team? team)
+    {
+        for (int index = 0; index < inventory.Count; index++)
+        {
+            BoardItemData item = inventory[index];
+            if (item.type != type || item.team != team) continue;
+            inventory.RemoveAt(index);
+            return item;
+        }
+        return null;
+    }
 
+    public BoardItemData RemoveFirstColorableItemForDrop()
+    {
+        for (int index = 0; index < inventory.Count; index++)
+        {
+            BoardItemData item = inventory[index];
+            bool isColorable = item.type == BoardItemType.Fragment || item.type == BoardItemType.Pearl;
+            if (!isColorable || item.team == teamNum) continue;
+            inventory.RemoveAt(index);
+            return item;
+        }
+
+        for (int index = 0; index < inventory.Count; index++)
+        {
+            BoardItemData item = inventory[index];
+            if (item.type != BoardItemType.Fragment && item.type != BoardItemType.Pearl) continue;
+            inventory.RemoveAt(index);
+            return item;
+        }
+        return null;
+    }
+
+    public List<BoardItemData> RemoveAllItems()
+    {
+        List<BoardItemData> droppedItems = new List<BoardItemData>(inventory);
+        inventory.Clear();
+        return droppedItems;
+    }
+
+    // æ—§ã‚³ãƒ¼ãƒ‰ã‹ã‚‰å‘¼ã°ã‚Œã¦ã‚‚åœ°ãƒ‘ãƒ¯ãƒ¼ã‚’æ”»æ’ƒåŠ›ã¸æ¥ç¶šã—ãªã„ãŸã‚ã€å›ºå®šã®è£œåŠ©æ”»æ’ƒåŠ›ã‚’ç¶­æŒã™ã‚‹ã€‚
     public void setPower()
     {
-        bool[,] buf = new bool[wMgr.gridCtrl.STAGE_SIZE_X, wMgr.gridCtrl.STAGE_SIZE_Y];
-
-
-        Debug.Log(power.preP);
-        power.setPoint(wMgr.gridCtrl.gatherEnergy(xCell,yCell,teamNum, ref buf));
-    }
-
-
-
-
-
-
-
-
-
-
-    // Start is called before the first frame update
-    void Start()//Œp³‚³‚ê‚Ä‚¢‚Äã‘‚«‚³‚ê‚é‚©‚çA‚±‚±‚É‚Í‘‚©‚¸‚ÉqƒNƒ‰ƒX‚É‹Lq‚µ‚Ä‚¢‚é
-    {
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
+        power.setPoint(1.0f);
     }
 }

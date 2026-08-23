@@ -7,7 +7,6 @@ public class PenguinController : Character
     // Start is called before the first frame update
     void Start()
     {
-        attackPower = 55;
         this.anim = GetComponent<Animator>();
     }
 

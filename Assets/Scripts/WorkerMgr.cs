@@ -17,7 +17,7 @@ public class WorkerMgr : MonoBehaviour
 
     //public BearController bear;
 
-    public GameObject RedBearPrefab;//ƒvƒŒƒnƒu‚ğ’u‚¢‚Ä‚¨‚­B
+    public GameObject RedBearPrefab;//ãƒ—ãƒ¬ãƒãƒ–ã‚’ç½®ã„ã¦ãŠãã€‚
     public GameObject BlueBearPrefab;
     public GameObject RedBullPrefab;
     public GameObject BlueBullPrefab;
@@ -35,14 +35,14 @@ public class WorkerMgr : MonoBehaviour
 
 
 
-    public List<GameObject> players;//ƒvƒŒƒnƒu‚©‚çì‚Á‚½ƒCƒ“ƒXƒ^ƒ“ƒX‚ğŠi”[‚·‚é”z—ñB
+    public List<GameObject> players;//ãƒ—ãƒ¬ãƒãƒ–ã‹ã‚‰ä½œã£ãŸã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ã‚’æ ¼ç´ã™ã‚‹é…åˆ—ã€‚
     public List<GameObject> redHado;
     public List<GameObject> blueHado;
 
     //public List<GameObject> cellText;
 
 
-    public List<Character> characters;//ƒCƒ“ƒXƒ^ƒ“ƒX‚©‚ç‚»‚ÌƒXƒNƒŠƒvƒg•”•ª‚ğ’Šo‚µ‚ÄŠi”[B
+    public List<Character> characters;//ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ã‹ã‚‰ãã®ã‚¹ã‚¯ãƒªãƒ—ãƒˆéƒ¨åˆ†ã‚’æŠ½å‡ºã—ã¦æ ¼ç´ã€‚
     public List<HadoCtrl> redHadoCtrl;
     public List<HadoCtrl> blueHadoCtrl;
 
@@ -87,37 +87,74 @@ public class WorkerMgr : MonoBehaviour
             c.setCharacter(x, y, t, this, g);
         };
 
-        var p0 = Instantiate(RedBearPrefab, new Vector2(-1.52f, -1.48f), Quaternion.identity);//ƒvƒŒƒnƒu‰»‚³‚ê‚½ÔŒF‚ğ¶¬
+        int gateCenterX = GridCtrl.BoardWidth / 2;
+        int redStartY = GridCtrl.BoardHeight - 2;
+        const int blueStartY = 1;
+
+        var p0 = Instantiate(RedBearPrefab, new Vector2(-1.52f, -1.48f), Quaternion.identity);//ãƒ—ãƒ¬ãƒãƒ–åŒ–ã•ã‚ŒãŸèµ¤ç†Šã‚’ç”Ÿæˆ
         var c0 = p0.GetComponent<BearController>();
-        registerCharacter(p0, c0, 7, 7, Team.Red);
+        // èµ¤ã¯ä¸Šå´ã®èµ¤çµç•Œã€é’ã¯ä¸‹å´ã®é’çµç•Œã«æ–œã‚éš£æ¥ã™ã‚‹äºŒãƒã‚¹ã‹ã‚‰é–‹å§‹ã™ã‚‹ã€‚
+        registerCharacter(p0, c0, gateCenterX - 2, redStartY, Team.Red);
 
-        var p1 = Instantiate(BlueBearPrefab, new Vector2(2.52f, -1.48f), Quaternion.identity);//ƒvƒŒƒnƒu‰»‚³‚ê‚½ÂŒF‚ğ¶¬
+        var p1 = Instantiate(BlueBearPrefab, new Vector2(2.52f, -1.48f), Quaternion.identity);//ãƒ—ãƒ¬ãƒãƒ–åŒ–ã•ã‚ŒãŸé’ç†Šã‚’ç”Ÿæˆ
         var c1 = p1.GetComponent<BearController>();
-        registerCharacter(p1, c1, 7, 15, Team.Blue);
+        registerCharacter(p1, c1, gateCenterX - 2, blueStartY, Team.Blue);
 
-        var p2 = Instantiate(RedPenguinPrefab, new Vector2(3.52f, -2.48f), Quaternion.identity);//Ôƒyƒ“ƒMƒ“
+        var p2 = Instantiate(RedPenguinPrefab, new Vector2(3.52f, -2.48f), Quaternion.identity);//èµ¤ãƒšãƒ³ã‚®ãƒ³
         var c2 = p2.GetComponent<PenguinController>();
-        registerCharacter(p2, c2, 15, 15, Team.Red);
+        registerCharacter(p2, c2, gateCenterX + 2, redStartY, Team.Red);
 
-        var p3 = Instantiate(BluePenguinPrefab, new Vector2(4.52f, -2.48f), Quaternion.identity);//Âƒyƒ“ƒMƒ“
+        var p3 = Instantiate(BluePenguinPrefab, new Vector2(4.52f, -2.48f), Quaternion.identity);//é’ãƒšãƒ³ã‚®ãƒ³
         var c3 = p3.GetComponent<PenguinController>();
-        registerCharacter(p3, c3, 15, 7, Team.Blue);
+        registerCharacter(p3, c3, gateCenterX + 2, blueStartY, Team.Blue);
 
 
 
 
-        //gridCtrl.PutAllCharacters();//Grid‚Ìƒ}ƒX‚Éì¬‚µ‚½‘SƒLƒƒƒ‰ƒNƒ^‚Ìƒ|ƒCƒ“ƒ^‚ªŠi”[‚³‚ê‚é
+        //gridCtrl.PutAllCharacters();//Gridã®ãƒã‚¹ã«ä½œæˆã—ãŸå…¨ã‚­ãƒ£ãƒ©ã‚¯ã‚¿ã®ãƒã‚¤ãƒ³ã‚¿ãŒæ ¼ç´ã•ã‚Œã‚‹
 
         turnOrder = 1;
-        Debug.Log("turnOrder‚Í" + turnOrder + "‚Ån‚Ü‚Á‚½");
+        Debug.Log("turnOrderã¯" + turnOrder + "ã§å§‹ã¾ã£ãŸ");
         
-        //characters[turnOrder].startTurn();///Å‰‚Ìƒ^[ƒ“ŠJn
+        //characters[turnOrder].startTurn();///æœ€åˆã®ã‚¿ãƒ¼ãƒ³é–‹å§‹
     }
 
     // Update is called once per frame
     void Update()
     {
             characters[turnOrder].startTurn();
+    }
+
+    private void Start()
+    {
+        PlaceInitialHadoFormation();
+    }
+
+    /// <summary>
+    /// å„çµç•Œå‰ã«ã€3å€‹â†’2å€‹â†’1å€‹ã®åˆæœŸæ³¢å‹•çŸ³ã‚’é…ç½®ã™ã‚‹ã€‚
+    /// ä¸Šå´ã¨ä¸‹å´ã¯ä¸Šä¸‹åè»¢ã§ã€ä¸¡é™£å–¶ã®é–‹å§‹ã‚»ãƒ«ã¯æœ€å‰åˆ—å·¦å³ã®çŸ³ã¨é‡ãªã‚‹ã€‚
+    /// </summary>
+    private void PlaceInitialHadoFormation()
+    {
+        int centerX = GridCtrl.BoardWidth / 2;
+        int[] firstRowOffsets = { -2, 0, 2 };
+        int[] secondRowOffsets = { -1, 1 };
+
+        PlaceInitialHadoRow(Team.Red, GridCtrl.BoardHeight - 2, centerX, firstRowOffsets);
+        PlaceInitialHadoRow(Team.Red, GridCtrl.BoardHeight - 3, centerX, secondRowOffsets);
+        PlaceInitialHadoRow(Team.Red, GridCtrl.BoardHeight - 4, centerX, new[] { 0 });
+
+        PlaceInitialHadoRow(Team.Blue, 1, centerX, firstRowOffsets);
+        PlaceInitialHadoRow(Team.Blue, 2, centerX, secondRowOffsets);
+        PlaceInitialHadoRow(Team.Blue, 3, centerX, new[] { 0 });
+    }
+
+    private void PlaceInitialHadoRow(Team team, int y, int centerX, int[] xOffsets)
+    {
+        foreach (int offset in xOffsets)
+        {
+            createHado(team, centerX + offset, y);
+        }
     }
 
 
@@ -127,7 +164,7 @@ public class WorkerMgr : MonoBehaviour
 
 
     /// <summary>
-    /// İ’u‚É¬Œ÷‚·‚é‚Æ1‚ª•Ô‚Á‚Ä‚­‚é
+    /// è¨­ç½®ã«æˆåŠŸã™ã‚‹ã¨1ãŒè¿”ã£ã¦ãã‚‹
     /// </summary>
     /// <param name="teamNum"></param>
     /// <param name="_xCell"></param>
@@ -135,7 +172,7 @@ public class WorkerMgr : MonoBehaviour
     /// <returns></returns>
     public int createHado(Team teamNum, int _xCell, int _yCell)
     {
-        if (!gridCtrl.isHadoVacant(_xCell, _yCell))//”g“®ƒŒƒCƒ„[‚ªNULL‚Å‚È‚¢ê‡A”g“®ì¬‚É¸”s
+        if (!gridCtrl.isHadoVacant(_xCell, _yCell))//æ³¢å‹•ãƒ¬ã‚¤ãƒ¤ãƒ¼ãŒNULLã§ãªã„å ´åˆã€æ³¢å‹•ä½œæˆã«å¤±æ•—
         {
             return 0;
         }
@@ -150,7 +187,7 @@ public class WorkerMgr : MonoBehaviour
         }
         if (teamNum == Team.Blue)
         {
-            //Debug.Log("‚Æ‚è‚ ‚¦‚¸ˆê“xƒCƒ“ƒXƒ^ƒ“ƒX‰»‚µ‚Ä‚İ‚é");
+            //Debug.Log("ã¨ã‚Šã‚ãˆãšä¸€åº¦ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹åŒ–ã—ã¦ã¿ã‚‹");
             var p = Instantiate(BlueHadoPrefab, new Vector2(_xCell, _yCell), Quaternion.identity);
             blueHado.Add(p);
             var c = p.GetComponent<HadoCtrl>();
@@ -189,10 +226,10 @@ public class WorkerMgr : MonoBehaviour
     public void turnNext()
     {
         turnOrder++;
-        if (turnOrder==characters.Count) turnOrder = 0;//ƒLƒƒƒ‰‚ªˆêü‚µ‚½‚ç–ß‚éB
+        if (turnOrder==characters.Count) turnOrder = 0;//ã‚­ãƒ£ãƒ©ãŒä¸€å‘¨ã—ãŸã‚‰æˆ»ã‚‹ã€‚
 
-        //Debug.Log("turnOrder‚Í" + turnOrder + "‚É‚È‚Á‚½");
-        //–{—ˆ‚Í‚±‚±‚ÉAŸ‚ÌƒLƒƒƒ‰‚ÌstartTurn‚ğŒÄ‚Ô•”•ª‚ª‚ ‚é‚×‚«‚È‚Ì‚¾‚ªAUpdate‚ÉˆÚİ‚µ‚½B
+        //Debug.Log("turnOrderã¯" + turnOrder + "ã«ãªã£ãŸ");
+        //æœ¬æ¥ã¯ã“ã“ã«ã€æ¬¡ã®ã‚­ãƒ£ãƒ©ã®startTurnã‚’å‘¼ã¶éƒ¨åˆ†ãŒã‚ã‚‹ã¹ããªã®ã ãŒã€Updateã«ç§»è¨­ã—ãŸã€‚
 
 
         //Debug.Log("0,0"+ gridCtrl.isPlayerVacant(0, 0));

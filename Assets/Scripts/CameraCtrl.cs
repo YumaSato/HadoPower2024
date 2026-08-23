@@ -6,6 +6,8 @@ using static UnityEngine.RuleTile.TilingRuleOutput;
 
 public class CameraCtrl : MonoBehaviour
 {
+    // å³å´HUDã®ä¸‹ã¸æ“ä½œã‚­ãƒ£ãƒ©ã‚¯ã‚¿ãƒ¼ãŒéš ã‚Œãªã„ã‚ˆã†ã€ç”»é¢ã®å·¦å¯„ã‚Šã¸ç½®ãã€‚
+    private const float ActiveCharacterHorizontalOffset = 0.30f;
     private Camera mainCam;
     public WorkerMgr wMgr;
     bool controllingFlag;
@@ -22,21 +24,24 @@ public class CameraCtrl : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if(wMgr.characters.Count > 0 & controllingFlag == false)//”Õã‚ÉƒLƒƒƒ‰ƒNƒ^‚ª‘¶İ‚µ‚Ä‚¢‚½‚ç
+        if(wMgr.characters.Count > 0 & controllingFlag == false)//ï¿½Õï¿½ÉƒLï¿½ï¿½ï¿½ï¿½ï¿½Nï¿½^ï¿½ï¿½ï¿½ï¿½ï¿½İ‚ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½ï¿½ï¿½
         {
             float x = wMgr.characters[wMgr.turnOrder].transform.position.x;
             float y = wMgr.characters[wMgr.turnOrder].transform.position.y;
-            destination = new Vector3(x, y, transform.position.z);
+            float horizontalOffset = mainCam == null ? 0.0f :
+                mainCam.orthographicSize * mainCam.aspect * ActiveCharacterHorizontalOffset;
+            // ã‚«ãƒ¡ãƒ©ä¸­å¿ƒã‚’ã‚­ãƒ£ãƒ©ã‚¯ã‚¿ãƒ¼ã‚ˆã‚Šå³ã¸ãšã‚‰ã™ã¨ã€ã‚­ãƒ£ãƒ©ã‚¯ã‚¿ãƒ¼ã¯ç”»é¢ã®å·¦å´ã«è¡¨ç¤ºã•ã‚Œã‚‹ã€‚
+            destination = new Vector3(x + horizontalOffset, y, transform.position.z);
             if(isMoving == false)
             {
-                StartCoroutine(Move(destination, 30f));//ˆÚ“®ó‘Ô‚Ì‰f‘œAŠJnB
+                StartCoroutine(Move(destination, 30f));//ï¿½Ú“ï¿½ï¿½ï¿½Ô‚Ì‰fï¿½ï¿½ï¿½Aï¿½Jï¿½nï¿½B
 
-                //Debug.Log("z‚Í" + destination.z + "‚Ån‚Ü‚Á‚½");
+                //Debug.Log("zï¿½ï¿½" + destination.z + "ï¿½Ånï¿½Ü‚ï¿½ï¿½ï¿½");
             }
         }
 
 
-        var scroll = Input.mouseScrollDelta.y * Time.deltaTime * 20;//ƒzƒC[ƒ‹‚ÅŠg‘åk¬
+        var scroll = Input.mouseScrollDelta.y * Time.deltaTime * 20;//ï¿½zï¿½Cï¿½[ï¿½ï¿½ï¿½ÅŠgï¿½ï¿½kï¿½ï¿½
         //Debug.Log(scroll);
         if ( 2 < mainCam.orthographicSize)
         {
@@ -61,12 +66,12 @@ public class CameraCtrl : MonoBehaviour
     {
         isMoving = true;
 
-        //Œ»İ‚Æƒ^[ƒQƒbƒg‚ÌêŠ‚ªˆá‚Á‚½‚ç‹ß‚Ã‚¯‘±‚¯‚éB
-        while ((destination - transform.position).sqrMagnitude > Mathf.Epsilon)//Œ»İ’n‚Æ–Ú“I’n‚ªˆá‚¤ê‡
+        //ï¿½ï¿½ï¿½İ‚Æƒ^ï¿½[ï¿½Qï¿½bï¿½gï¿½ÌêŠï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß‚Ã‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½B
+        while ((destination - transform.position).sqrMagnitude > Mathf.Epsilon)//ï¿½ï¿½ï¿½İ’nï¿½Æ–Ú“Iï¿½nï¿½ï¿½ï¿½á‚¤ï¿½ê‡
         {
-            //‹ß‚Ã‚¯‚é(MoveToward‚ÍAu1Œ»İ’n, 2–Ú•W’n“_, 3‘¬“xv‚Å–Ú•W‚ÉŒü‚©‚Á‚ÄˆÚ“®‚·‚é‚Æ‚¢‚¤ŠÖ”)
+            //ï¿½ß‚Ã‚ï¿½ï¿½ï¿½(MoveTowardï¿½ÍAï¿½u1ï¿½ï¿½ï¿½İ’n, 2ï¿½Ú•Wï¿½nï¿½_, 3ï¿½ï¿½ï¿½xï¿½vï¿½Å–Ú•Wï¿½ÉŒï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÄˆÚ“ï¿½ï¿½ï¿½ï¿½ï¿½Æ‚ï¿½ï¿½ï¿½ï¿½Öï¿½)
             transform.position = Vector3.MoveTowards(transform.position, destination, speed * Time.deltaTime);
-            yield return null;//1ƒtƒŒ[ƒ€•ª‘Ò‚Â‚Æ‚¢‚¤ˆÓ–¡B
+            yield return null;//1ï¿½tï¿½ï¿½ï¿½[ï¿½ï¿½ï¿½ï¿½ï¿½Ò‚Â‚Æ‚ï¿½ï¿½ï¿½ï¿½Ó–ï¿½ï¿½B
         }
         transform.position = destination;
        isMoving = false;
